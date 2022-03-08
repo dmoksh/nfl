@@ -13,10 +13,9 @@ def load_data():
     return df
 
 #load data from nflfastpy
-st.set_page_config(layout="wide")
+st.set_page_config(layout="centered", page_icon="🏈", page_title="QB's on 3rd and 4th downs")
 df = load_data()
 
-print(df.shape)
 #filter for 3rd and 4th downs with pass attempts
 df = df.loc[((df['down'] == 3) | (df['down'] == 4)) & ((df['play_type'] == 'pass') | (df['pass'] == 1))]
 
@@ -28,9 +27,24 @@ df = df.groupby(['passer_id','passer'], as_index=False).apply(lambda x: pd.Serie
 
 df['success_percent'] = round((df['successful_attempts']/df['attempts'])*100,2)
 
-st.dataframe(df)
+#title and captions
+st.title("🏈 NFL QB Performance on 3rd and 4th downs")
+st.caption("* An attempt is considered successful if it ends in firstdown or touchdown, with or without the help of penalties.")
+st.caption("* Both regular and post season games")
 
+#snippets
+#st.write("Burrow has most attemps at 242 and Stafford most successful attempts at 99")
+#st.write("For players above 100 attempts, Justin Fields has lowest sucessful attempts with 23")
+st.metric(label="Most attempts - Burrow", value="242")
+st.metric(label="Most successful attempts - Stafford", value="99")
+
+#display the dataframe as table - remove passer_id
+st.dataframe(df[['passer','attempts','successful_attempts','success_percent','qb_epa','total_yards']])
+
+#plot to show attempts vs successful_attempts
+st.subheader("Plot - Attempts vs Successful Attempts")
 c = alt.Chart(df).mark_circle().encode(
-     x='successful_attempts', y='attempts', size='success_percent', color='successful_attempts', tooltip=['attempts', 'successful_attempts','passer','success_percent'])
+     x='successful_attempts', y='attempts', size=alt.Size('success_percent',legend=None), color=alt.Color('passer', legend=None), tooltip=['attempts', 'successful_attempts','passer','success_percent'])
+
 
 st.altair_chart(c, use_container_width=True)
