@@ -3,7 +3,6 @@ from numpy import sort
 import pandas as pd
 import streamlit as st  
 import altair as alt
-from pandasql import sqldf
 import plotly_express as px
 
 
