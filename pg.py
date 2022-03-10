@@ -18,6 +18,7 @@ df = df.groupby(['passer_id','passer'], as_index=False).apply(lambda x: pd.Serie
     'touchdowns':x['touchdown'].sum()}))
 
 df['success_percent'] = round((df['successful_attempts']/df['attempts'])*100,2)
+#df.sort_values(by=['successful_attempts'],ascending=False,inplace=True)
 
 print(df.iloc[df['attempts'].idxmax()]['passer'])
 print(df.iloc[df['successful_attempts'].idxmax()]['passer'])
