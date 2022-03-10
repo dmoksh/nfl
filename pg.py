@@ -3,15 +3,28 @@ import pandas
 from sqlalchemy import create_engine
 import streamlit as st  
 from pandasql import sqldf
+import pandas as pd
 
 #download play by play data
 df = nflfastpy.load_pbp_data("2021")
 
-#connection string to local database
-engine = create_engine('postgresql://dinu:@localhost:5432/dinu')
+df = df.loc[((df['down'] == 3) | (df['down'] == 4)) & ((df['play_type'] == 'pass') | (df['pass'] == 1))]
 
-#load df into the table.
-df.to_sql("last_year",engine,schema="nfl",if_exists="replace")
+
+df = df.groupby(['passer_id','passer'], as_index=False).apply(lambda x: pd.Series({'attempts':x['down'].count(),
+    'successful_attempts':x.loc[(x.first_down_pass==1)|(x.pass_touchdown==1)]['down'].count(),
+    'total_yards':x['yards_gained'].sum(),
+    'qb_epa':x['qb_epa'].sum(),
+    'touchdowns':x['touchdown'].sum()}))
+
+df['success_percent'] = round((df['successful_attempts']/df['attempts'])*100,2)
+
+print(df.iloc[df['attempts'].idxmax()]['passer'])
+print(df.iloc[df['successful_attempts'].idxmax()]['passer'])
+print(df.iloc[df['total_yards'].idxmax()]['passer'])
+print(df.iloc[df['touchdowns'].idxmax()]['passer'])
+
+
 
 
 
