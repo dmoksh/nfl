@@ -74,7 +74,8 @@ with st.container():
 
 #display the dataframe as table - remove passer_id
 st.subheader("Table - QB Stats on 3rd and 4th downs")
-st.dataframe(df[['passer','attempts','successful_attempts','success_percent','qb_epa','total_yards','touchdowns']])
+df1 = df.sort_values(by=['successful_attempts'],ascending=False)
+st.dataframe(df1[['passer','attempts','successful_attempts','success_percent','qb_epa','total_yards','touchdowns']])
 
 
 #plot to show attempts vs successful_attempts
@@ -90,5 +91,5 @@ st.altair_chart(c, use_container_width=True)
 #chart to show qb_epa
 df.sort_values(by=['qb_epa'],ascending=True,inplace=True)
 st.subheader("Chart - QB EPA")
-fig = px.bar(df, x='passer', y='qb_epa')
+fig = px.bar(df, x='passer', y='qb_epa',color='qb_epa')
 st.plotly_chart(figure_or_data=fig,use_container_width=True)
