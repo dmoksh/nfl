@@ -48,7 +48,7 @@ df = load_data()
 df = query_dataframe(df = df)
 
 #title and captions
-st.title("🏈 QB stats on 3rd and 4th downs")
+st.title("🏈 QB stats on 3rd and 4th downs - 2021")
 st.caption("An attempt is considered successful if it ends in firstdown or touchdown, with or without the help of penalties.")
 #st.caption("* Both regular and post season games")
 
@@ -92,3 +92,4 @@ df.sort_values(by=['qb_epa'],ascending=True,inplace=True)
 st.subheader("Chart - QB EPA")
 fig = px.bar(df, x='passer', y='qb_epa',color='qb_epa')
 st.plotly_chart(figure_or_data=fig,use_container_width=True)
+
