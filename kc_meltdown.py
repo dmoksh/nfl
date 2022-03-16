@@ -1,6 +1,7 @@
 import streamlit as st
 import pandas as pd
 import nflfastpy
+import pyspark
 
 def load_data():
     #download play by play data
@@ -12,6 +13,26 @@ st.set_page_config(layout="wide", page_icon="🏈", page_title="Chiefs' 2nd Half
 
 #load data from nflfastpy
 df = load_data()
+print(df.shape)
+st.title("Chiefs Offence - 2nd Half of AFC title game")
+
+#get only Chief's offense rows
+df = df[df["posteam"] =="KC"]
+
+#remove rows where drive is null
+df = df[df['drive'].notna()]
+print(df.shape)
+
+#add a new column to show drive number for season
+df["drive_number_for_season"] = df[["game_id","drive"]].apply(tuple,axis=1)\
+             .rank(method='dense',ascending=True).astype(int)
+
+df['drive_yards'] = df['yards_gained'].groupby(df[['game_id','drive_number_for_season']]).transform('sum')
+
+print(df.head(5))
+
+
+
 
 
 
