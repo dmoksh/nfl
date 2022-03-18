@@ -2,50 +2,57 @@ import streamlit as st
 import pandas as pd
 import nflfastpy
 
-
+@st.cache()
 def load_data():
     #download play by play data
     df = nflfastpy.load_pbp_data("2021")
     return df
 
-#set streamlit page settings - this should be first command
-st.set_page_config(layout="wide", page_icon="🏈", page_title="Chiefs' 2nd Half Offense in 2021 AFC Title Game")
-
-#load data from nflfastpy
-df = load_data()
-print(df.shape)
-st.title("Chiefs Offence - 2nd Half of AFC title game")
-
-#get only Chief's offense rows
-df = df[df["posteam"] =="KC"]
-
-#remove rows where drive is null
-df = df[df['drive'].notna()]
-print(df.shape)
-
-#add a new column to show drive number for the game
-df['drive_number_for_game'] = (df.groupby('game_id')['drive']
+def get_data_for_7_drive_rolling_average(df):
+    #get only Chief's offense rows
+    df = df[df["posteam"] =="KC"]
+    #remove rows where drive is null
+    df = df[df['drive'].notna()]
+    #add a new column to show drive number for the game - in sql terms dense rank partitioned by game_id
+    df['drive_number_for_game'] = (df.groupby('game_id')['drive']
                       .rank(method='dense', ascending=True)
                       .astype(int)
                    )
-
-
-#add a new column to show drive number for season
-df["drive_number_for_season"] = df[["game_id","drive"]].apply(tuple,axis=1)\
+    #add a new column to show drive number for season - in sql terms dense rank over the entire table.
+    df["drive_number_for_season"] = df[["game_id","drive"]].apply(tuple,axis=1)\
              .rank(method='dense',ascending=True).astype(int)
+    #add a new column to get accurate yards gained by penalty - offense + penalty yards
+    df['yards_gained_plus_penalty'] = df['yards_gained'].fillna(0) + df['penalty_yards'].fillna(0)
+    #remove unwanted columns
+    df = df[['game_id','drive_number_for_game','drive_number_for_season','yards_gained_plus_penalty']]
+    #df.to_csv("df.csv")
+    #group by and sum up yards for the drive.
+    df = df.groupby(['game_id','drive_number_for_game','drive_number_for_season'], as_index=False).apply(lambda x: pd.Series({'drive_yards':x['yards_gained_plus_penalty'].sum()}))
+    #create rolling 7 drive sum
+    df['rolling_7_drive_sum_yards_gained'] = df['drive_yards'].rolling(7).sum()
+    return df
 
-df = df[['game_id','drive_number_for_game','drive_number_for_season','yards_gained']]
-df.to_csv("df.csv")
-#df['drive_yards'] = df['yards_gained'].groupby(df[['game_id','drive_number_for_game','drive_number_for_season']]).transform('sum')
-#now group by QB and count attemps (straight up count) and successful attempts (SUM(CASE WHEN (first_down_pass=1 or pass_touchdown=1) THEN 1 ELSE 0 END))
-df1 = df.groupby(['game_id','drive_number_for_game','drive_number_for_season'], as_index=False).apply(lambda x: pd.Series({'drive_yards':x['yards_gained'].sum()}))
-df1['rolling_7_drive_sum_yards_gained'] = df1['drive_yards'].rolling(7).sum()
-df1.to_csv("df_agg.csv")
 
 
-st.subheader("Chiefs' offensive production in 2nd half and overtime - 83 yards")
+#set streamlit page settings - this should be first command
+st.set_page_config(layout="wide", page_icon="🏈", page_title="Chiefs' 2nd Half Offense in 2021 AFC Title Game")
+st.title("Chiefs Offense - 2nd Half of AFC title game - 7 Drives | 83 Yards")
+
+#load data from nflfastpy
+df = load_data()
+
+#get data from 7 drive rolling average
+df1 = get_data_for_7_drive_rolling_average(df = df)
+
+
+
+
 st.write("""That doesn't sound right, especially with Mahomes at helm, so i wanted to see how bad was it. 
-Compiled a rolling sum yards for any given 7 drives in 2021 and only once did they score less than this - 77 against GB in week 5""")
+Compiled a rolling sum yards for any given 7 drives in 2021 and could find only 2 instances where they scored less:""")
+
+st.write('* Week 5 against GB - 77 yards - that was a bad game 😖')
+st.write('* Drives spread across week 13 and 14 - not counting this because, week 13 game ended with KC taking knee')
+
 
 #df1.sort_values(by=['rolling_7_drive_sum_yards_gained'],ascending=True,inplace=True)
 st.dataframe(df1)
